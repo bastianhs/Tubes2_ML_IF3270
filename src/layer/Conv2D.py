@@ -27,14 +27,70 @@ class Conv2D():
             padding (str, optional): Padding type, either 'valid' or 'same'. Defaults to 'valid'.
             **kwargs: Additional keyword arguments.
         """
+        # Validate and set the parameters for the Conv2D layer
+        if not isinstance(filters, int) or filters <= 0:
+            raise ValueError("filters must be a positive integer.")
         self.filters = filters
+
+        if not isinstance(kernel_size, tuple) or len(kernel_size) != 2:
+            raise ValueError("kernel_size must be a tuple of (height, width).")
         self.kernel_size = kernel_size
+
         self.input_shape = input_shape
+        if input_shape is not None:
+            if not isinstance(input_shape, tuple) or len(input_shape) != 3:
+                raise ValueError("input_shape must be a tuple of (height, width, channels).")
+            self.input_shape = input_shape
+
+        if kernel is not None:
+            if not isinstance(kernel, np.ndarray):
+                raise ValueError("kernel must be a numpy ndarray.")
+            if kernel.ndim != 4 or kernel.shape[2] != input_shape[2] or kernel.shape[3] != filters:
+                raise ValueError("kernel shape must be (kernel_height, kernel_width, input_channels, filters).")
+        else:
+            kernel = np.random.rand(kernel_size[0], kernel_size[1], input_shape[2], filters) if input_shape else None
         self.kernel = kernel
+
+        if bias is not None:
+            if not isinstance(bias, np.ndarray):
+                raise ValueError("bias must be a numpy ndarray.")
+            if bias.ndim != 1 or bias.shape[0] != filters:
+                raise ValueError("bias shape must be (filters,).")
+        else:
+            bias = np.random.rand(filters) if filters > 0 else None
         self.bias = bias
+
+        if activation is not None and not callable(activation):
+            raise ValueError("activation must be a callable function.")
         self.activation = activation
+
+        if not isinstance(strides, tuple) or len(strides) != 2:
+            raise ValueError("strides must be a tuple of (stride_height, stride_width).")
         self.strides = strides
-        self.padding = padding
+
+        self.padding = padding.lower()
+        if self.padding not in ['valid', 'same']:
+            raise ValueError("padding must be either 'valid' or 'same'.")
+
+        self.kwargs = kwargs
+
+    def get_config(self):
+        """
+        Returns the configuration of the Conv2D layer.
+
+        Returns:
+            dict: Configuration of the Conv2D layer.
+        """
+        return {
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "input_shape": self.input_shape if self.input_shape is not None else (None, None, None),
+            "kernel": self.kernel,
+            "bias": self.bias,
+            "activation": self.activation,
+            "strides": self.strides,
+            "padding": self.padding
+        }
 
     def set_weights(self, weights):
         """
@@ -56,30 +112,23 @@ class Conv2D():
         """
         return [self.kernel, self.bias]
 
-    def get_config(self):
+    def set_input_shape(self, input_shape):
         """
-        Returns the configuration of the Conv2D layer.
+        Sets the input shape for the Conv2D layer.
 
-        Returns:
-            dict: Configuration of the Conv2D layer.
+        Args:
+            input_shape (tuple): Shape of the input data. It should be in the form (height, width, channels).
         """
-        return {
-            "filters": self.filters,
-            "kernel_size": self.kernel_size,
-            "input_shape": self.input_shape,
-            "kernel": self.kernel,
-            "bias": self.bias,
-            "activation": self.activation,
-            "strides": self.strides,
-            "padding": self.padding
-        }
+        if not isinstance(input_shape, tuple) or len(input_shape) != 3:
+            raise ValueError("input_shape must be a tuple of (height, width, channels).")
+        self.input_shape = input_shape
 
     def compute_output_shape(self, input_shape=None):
         """
         Computes the output shape of the Conv2D layer given the input shape.
 
         Args:
-            input_shape (tuple, optional): Shape of the input data. Defaults to None. It should be in the form (height, width, channels).
+            input_shape (tuple, optional): Shape of the input data. Defaults to None. It should be in the form (height, width, channels) or (batch, height, width, channels).
 
         Returns:
             tuple: Output shape after applying the convolution.
@@ -89,23 +138,31 @@ class Conv2D():
                 raise ValueError("Input shape must be provided or set during initialization.")
             input_shape = self.input_shape
 
-        height, width, channels = input_shape
+        if len(input_shape) == 4: # Handle batch dimension
+            _, height, width, channels = input_shape
+        elif len(input_shape) == 3:
+            height, width, channels = input_shape
+        else:
+            raise ValueError("Input shape must be (height, width, channels) or (batch, height, width, channels).")
+
         kernel_height, kernel_width = self.kernel_size
         stride_height, stride_width = self.strides
-        
         if self.padding == "valid":
-            output_height = (height - kernel_height) // stride_height + 1
-            output_width = (width - kernel_width) // stride_width + 1
+            output_height = ((height - kernel_height) // stride_height) + 1
+            output_width = ((width - kernel_width) // stride_width) + 1
         elif self.padding == "same":
-            output_height = int(np.ceil(float(height) / float(stride_height)))
-            output_width = int(np.ceil(float(width) / float(stride_width)))
+            output_height = ((height - 1) // stride_height) + 1
+            output_width = ((width - 1) // stride_width) + 1
         else:
             raise ValueError("Padding must be either 'valid' or 'same'.")
         
         if output_height <= 0 or output_width <= 0:
             raise ValueError("Output dimensions must be positive. Check input shape, kernel size, and strides.")
         
-        return (output_height, output_width, self.filters)
+        if len(input_shape) == 4:
+            return (input_shape[0], output_height, output_width, self.filters)
+        else:
+            return (output_height, output_width, self.filters)
 
     @property
     def trainable_weights(self):
@@ -135,9 +192,9 @@ class Conv2D():
             kernel_height, kernel_width = self.kernel_size
             stride_height, stride_width = self.strides
 
-            # Calculate padding for 'same' convolution
-            out_height = int(np.ceil(float(input_height) / float(stride_height)))
-            out_width = int(np.ceil(float(input_width) / float(stride_width)))
+            # Calculate padding
+            out_height =  ((input_height - 1) // stride_height) + 1
+            out_width = ((input_width - 1) // stride_width) + 1
             pad_along_height = max((out_height - 1) * stride_height + kernel_height - input_height, 0)
             pad_along_width = max((out_width - 1) * stride_width + kernel_width - input_width, 0)
             pad_top = pad_along_height // 2
@@ -205,37 +262,97 @@ class Conv2D():
         Applies the Conv2D layer to the input data.
 
         Args:
-            inputs (np.ndarray): Input data to the Conv2D layer.
+            inputs (np.ndarray): Input data to the Conv2D layer. Shape: (height, width, channels) or (batch, height, width, channels)
 
         Returns:
             np.ndarray: Output after applying the convolution and activation function.
         """
+        # Ensure input shape is set if not provided
+        if self.input_shape is None:
+            if inputs.ndim == 4:
+                self.set_input_shape(inputs.shape[1:])
+                print("Input shape set to:", self.input_shape)
+            else:
+                self.set_input_shape(inputs.shape)
+
+        # Validate weights
         if self.kernel is None or self.bias is None:
             raise ValueError("Kernel and bias must be set before calling the layer.")
-
-        return self.__convolution(inputs)
+        
+        # Validate inputs
+        if inputs is None:
+            raise ValueError("Inputs cannot be None.")
+        if not isinstance(inputs, np.ndarray):
+            raise ValueError("Inputs must be a numpy ndarray.")
+        
+        # Do the convolution
+        if inputs.ndim == 3:
+            # Single sample, shape (height, width, channels)
+            if self.input_shape is not None and inputs.shape != self.input_shape:
+                raise ValueError(f"Input shape {inputs.shape} does not match expected input shape {self.input_shape}.")
+            if inputs.shape[2] != self.kernel.shape[2]:
+                raise ValueError(f"Input channels {inputs.shape[2]} do not match kernel channels {self.kernel.shape[2]}.")
+            return self.__convolution(inputs)
+        elif inputs.ndim == 4:
+            # Batch input, shape (batch, height, width, channels)
+            batch_size = inputs.shape[0]
+            results = []
+            for i in range(batch_size):
+                sample = inputs[i]
+                if self.input_shape is not None and sample.shape != self.input_shape:
+                    raise ValueError(f"Input shape {sample.shape} does not match expected input shape {self.input_shape}.")
+                if sample.shape[2] != self.kernel.shape[2]:
+                    raise ValueError(f"Input channels {sample.shape[2]} do not match kernel channels {self.kernel.shape[2]}.")
+                results.append(self.__convolution(sample))
+            return np.stack(results, axis=0)
+        else:
+            raise ValueError("Inputs must have shape (height, width, channels) or (batch, height, width, channels).")
     
 if __name__ == "__main__":
+    batch_size = 10
+    channels = 3
+    input_height = 32
+    input_width = 24
+    kernel_height = 3
+    kernel_width = 5
+    filters = 32
+    strides = (1, 1)
+    padding = "valid"
+
+
     # Example usage
-    conv_layer = Conv2D(filters=32, kernel_size=(3, 3), input_shape=(10, 10, 3))
-    conv_layer.set_weights([np.random.rand(3, 3, 3, 32), np.random.rand(32)])  # Random kernel and bias
+    relu = lambda x: np.maximum(0, x)
+    conv_layer = Conv2D(
+        filters=filters,
+        kernel_size=(kernel_height, kernel_width),
+        input_shape=(input_height, input_width, channels),
+        activation=relu,
+        strides=strides,
+        padding=padding
+    )
 
-    # Get the configuration of the layer
-    config = conv_layer.get_config()
-    print("Layer configuration:", config)
+    # kernel and bias weights
+    kernel = np.random.rand(kernel_height, kernel_width, channels, filters)
+    bias = np.random.rand(filters)
+    conv_layer.set_weights([kernel, bias])
 
-    # Create a random input tensor
-    inputs = np.random.rand(10, 10, 3)
+    # input tensor
+    inputs = np.random.rand(batch_size, input_height, input_width, channels)
 
     # Apply the Conv2D layer
     output = conv_layer(inputs)
-    print("Output:", output)
     print("Output shape:", output.shape)
-    
-    # Get the output shape
-    output_shape = conv_layer.compute_output_shape(inputs.shape)
-    print("Output shape:", output_shape)
+    print("Output shape:", conv_layer.compute_output_shape(inputs.shape))
+    print("Output shape:", conv_layer.compute_output_shape())
 
-    # Get trainable parameters
-    trainable_params = conv_layer.trainable_weights
-    print("Trainable parameters:", [param.shape for param in trainable_params])
+    # # Get the configuration of the Conv2D layer
+    # config = conv_layer.get_config()
+    # print("Conv2D Layer Configuration:")
+    # for key, value in config.items():
+    #     print(f"{key}: {value}")
+
+    # Get the trainable weights
+    trainable_weights = conv_layer.trainable_weights
+    print("Trainable Weights:")
+    for weight in trainable_weights:
+        print(weight.shape)
