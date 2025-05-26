@@ -1,8 +1,5 @@
 import numpy as np
 
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.models import Sequential
-
 class Conv2D():
     def __init__(
             self,
@@ -39,42 +36,26 @@ class Conv2D():
         self.strides = strides
         self.padding = padding
 
-    def set_kernel(self, kernel):
+    def set_weights(self, weights):
         """
-        Sets the kernel weights for the Conv2D layer.
+        Sets the kernel and bias weights for the Conv2D layer.
 
         Args:
-            kernel (np.ndarray): Weights for the convolution kernel.
+            weights (list): [kernel, bias] where kernel is np.ndarray and bias is np.ndarray.
         """
-        self.kernel = kernel
+        if not isinstance(weights, (list, tuple)) or len(weights) != 2:
+            raise ValueError("weights must be a list or tuple of [kernel, bias].")
+        self.kernel, self.bias = weights
 
-    def set_bias(self, bias):
+    def get_weights(self):
         """
-        Sets the bias weights for the Conv2D layer.
-
-        Args:
-            bias (np.ndarray): Weights for the bias.
-        """
-        self.bias = bias
-        
-    def get_kernel(self):
-        """
-        Returns the kernel weights of the Conv2D layer.
+        Returns the kernel and bias weights of the Conv2D layer.
 
         Returns:
-            np.ndarray: Weights for the convolution kernel.
+            list: [kernel, bias]
         """
-        return self.kernel
-    
-    def get_bias(self):
-        """
-        Returns the bias weights of the Conv2D layer.
+        return [self.kernel, self.bias]
 
-        Returns:
-            np.ndarray: Weights for the bias.
-        """
-        return self.bias
-    
     def get_config(self):
         """
         Returns the configuration of the Conv2D layer.
@@ -93,7 +74,7 @@ class Conv2D():
             "padding": self.padding
         }
 
-    def get_output_shape(self, input_shape=None):
+    def compute_output_shape(self, input_shape=None):
         """
         Computes the output shape of the Conv2D layer given the input shape.
 
@@ -107,11 +88,11 @@ class Conv2D():
             if self.input_shape is None:
                 raise ValueError("Input shape must be provided or set during initialization.")
             input_shape = self.input_shape
-        
+
         height, width, channels = input_shape
         kernel_height, kernel_width = self.kernel_size
         stride_height, stride_width = self.strides
-
+        
         if self.padding == "valid":
             output_height = (height - kernel_height) // stride_height + 1
             output_width = (width - kernel_width) // stride_width + 1
@@ -126,20 +107,18 @@ class Conv2D():
         
         return (output_height, output_width, self.filters)
 
-    def get_trainable_parameters(self):
+    @property
+    def trainable_weights(self):
         """
-        Returns the trainable weights of the Conv2D layer.
-        This includes the kernel and bias weights.
-
+        Returns the trainable weights of the Conv2D layer (kernel and bias).
         Returns:
-            list: List containing the kernel and bias weights.
+            list: [kernel, bias]
         """
         if self.kernel is None or self.bias is None:
             raise ValueError("Kernel and bias must be set before retrieving trainable weights.")
-        
         return [self.kernel, self.bias]
 
-    def add_padding(self, inputs):
+    def __add_padding(self, inputs):
         """
         Adds padding to the input data based on the specified padding type.
 
@@ -172,7 +151,7 @@ class Conv2D():
         else:
             raise ValueError("Padding must be either 'valid' or 'same'.")
 
-    def convolution(self, inputs):
+    def __convolution(self, inputs):
         """
         Performs the convolution operation on the input data from scratch.
         This method applies the convolution operation using the kernel and padding specified during initialization.
@@ -189,7 +168,7 @@ class Conv2D():
             raise ValueError("Padding must be either 'valid' or 'same'.")
 
         # Add padding if needed
-        x = self.add_padding(inputs)
+        x = self.__add_padding(inputs)
         input_height, input_width, input_channels = x.shape
         kernel_height, kernel_width, kernel_in_channels, num_filters = self.kernel.shape
         stride_height, stride_width = self.strides
@@ -214,9 +193,11 @@ class Conv2D():
             # Add bias if available
             if self.bias is not None:
                 output[:, :, f] += self.bias[f]
+        
         # Apply activation if available
         if self.activation is not None:
             output = self.activation(output)
+        
         return output
     
     def __call__(self, inputs):
@@ -232,4 +213,29 @@ class Conv2D():
         if self.kernel is None or self.bias is None:
             raise ValueError("Kernel and bias must be set before calling the layer.")
 
-        return self.convolution(inputs)
+        return self.__convolution(inputs)
+    
+if __name__ == "__main__":
+    # Example usage
+    conv_layer = Conv2D(filters=32, kernel_size=(3, 3), input_shape=(10, 10, 3))
+    conv_layer.set_weights([np.random.rand(3, 3, 3, 32), np.random.rand(32)])  # Random kernel and bias
+
+    # Get the configuration of the layer
+    config = conv_layer.get_config()
+    print("Layer configuration:", config)
+
+    # Create a random input tensor
+    inputs = np.random.rand(10, 10, 3)
+
+    # Apply the Conv2D layer
+    output = conv_layer(inputs)
+    print("Output:", output)
+    print("Output shape:", output.shape)
+    
+    # Get the output shape
+    output_shape = conv_layer.compute_output_shape(inputs.shape)
+    print("Output shape:", output_shape)
+
+    # Get trainable parameters
+    trainable_params = conv_layer.trainable_weights
+    print("Trainable parameters:", [param.shape for param in trainable_params])
