@@ -87,10 +87,10 @@ class GlobalPooling():
     @property
     def trainable_weights(self):
         """
-        Returns the trainable weights of the MaxPooling layer.
+        Returns the trainable weights of the GlobalPooling layer.
 
         Returns:
-            list: An empty list since MaxPooling does not have trainable weights.
+            list: An empty list since GlobalPooling does not have trainable weights.
         """
         return []
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     max_pooling_layer = GlobalMaxPooling(input_shape=(4, 4, 3))
     avg_output = max_pooling_layer(inputs)
     print("Max pooled output shape:", avg_output.shape)  # Should be (2, 3)
-    print("Max pooled output shape:", max_pooling_layer.compute_output_shape(inputs.shape))
+    print("Max pooled output shape:", max_pooling_layer.compute_output_shape())
     print("Max pooled output:", avg_output)
     print("Trainable parameters:", max_pooling_layer.trainable_weights)
     print()
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     avg_pooling_layer = GlobalAveragePooling(input_shape=(4, 4, 3))
     avg_output = avg_pooling_layer(inputs)
     print("Average pooled output shape:", avg_output.shape)  # Should be (2, 3)
-    print("Average pooled output shape:", avg_pooling_layer.compute_output_shape(inputs.shape))
+    print("Average pooled output shape:", avg_pooling_layer.compute_output_shape())
     print("Average pooled output:", avg_output)
     print("Trainable parameters:", avg_pooling_layer.trainable_weights)
     

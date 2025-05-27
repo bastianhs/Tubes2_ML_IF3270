@@ -319,7 +319,6 @@ if __name__ == "__main__":
     strides = (1, 1)
     padding = "valid"
 
-
     # Example usage
     relu = lambda x: np.maximum(0, x)
     conv_layer = Conv2D(
@@ -342,7 +341,6 @@ if __name__ == "__main__":
     # Apply the Conv2D layer
     output = conv_layer(inputs)
     print("Output shape:", output.shape)
-    print("Output shape:", conv_layer.compute_output_shape(inputs.shape))
     print("Output shape:", conv_layer.compute_output_shape())
 
     # # Get the configuration of the Conv2D layer
