@@ -1,4 +1,5 @@
 import numpy as np
+from ..utils.ActivationFunction import ActivationFunction
 
 class Conv2D():
     def __init__(
@@ -40,10 +41,7 @@ class Conv2D():
 
         self.set_input_shape(input_shape)
         self.set_weights([kernel, bias])
-
-        if activation is not None and not callable(activation):
-            raise ValueError("activation must be a callable function or None.")
-        self.activation = activation
+        self.activation = ActivationFunction().activation(activation) if activation else None
 
         if not isinstance(strides, tuple) or len(strides) != 2:
             raise ValueError("strides must be a tuple of (stride_height, stride_width).")
@@ -322,10 +320,9 @@ if __name__ == "__main__":
     filters = 32
     strides = (1, 1)
     padding = "valid"
-    activation = lambda x: np.maximum(0, x)
+    activation = "relu"
 
     # Example usage
-    # kernel and bias weights
     kernel = np.random.rand(kernel_height, kernel_width, channels, filters)
     bias = np.random.rand(filters)
 

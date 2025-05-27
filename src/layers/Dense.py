@@ -1,4 +1,5 @@
 import numpy as np
+from ..utils.ActivationFunction import ActivationFunction
 
 class Dense():
     def __init__(
@@ -27,10 +28,8 @@ class Dense():
 
         self.set_input_shape(input_shape)
         self.set_weights([kernel, bias])
+        self.activation = ActivationFunction().activation(activation) if activation else None
 
-        if activation is not None and not callable(activation):
-            raise ValueError("activation must be a callable function or None.")
-        self.activation = activation
         
     def get_config(self):
         """
@@ -213,7 +212,7 @@ if __name__ == "__main__":
     input_data = np.random.rand(3, 5)
     # input_data = np.random.rand(5)
 
-    dense_layer = Dense(units=10, activation=np.tanh, kernel=kernel, bias=bias)
+    dense_layer = Dense(units=10, activation="tanh", kernel=kernel, bias=bias)
     output_data = dense_layer(input_data)
     print("Output data:", output_data)
     print("Output shape:", output_data.shape)
