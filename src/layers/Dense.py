@@ -101,31 +101,18 @@ class Dense():
                 raise ValueError("input_shape dimensions must be positive integers.")
         self.input_shape = input_shape
 
-    def compute_output_shape(self, input_shape=None):
+    def compute_output_shape(self, **kwargs):
         """
         Computes the output shape of the Dense layer.
 
         Parameters:
-            input_shape (tuple): Shape of the input tensor. If None, uses the previously set input shape.
+            **kwargs: Additional keyword arguments (not used).
 
         Returns:
             tuple: Output shape of the Dense layer, which is (batch_size, units) jika batch, atau (units,) jika single sample.
         """
-        if input_shape is None:
-            if self.input_shape is None:
-                raise ValueError("Input shape must be provided or set during initialization.")
-            input_shape = self.input_shape
-
-        if len(input_shape) == 2: # Handle batch dimension
-            batch_size, input_units = input_shape
-        elif len(input_shape) == 1:
-            input_units = input_shape[0]
-        else:
-            raise ValueError("Input shape must be (height, width, channels) or (batch, height, width, channels).")
-        
-        if self.input_shape is not None and input_units != self.input_shape[0]:
-            raise ValueError(f"Input shape must match the set input shape ({self.input_shape[0]}).")
-
+        if self.units is None:
+            raise ValueError("Units must be set before computing output shape.")
         return (self.units,)
     
     @property
