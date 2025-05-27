@@ -135,6 +135,12 @@ class GlobalPooling():
         Returns:
         numpy.ndarray: Pooled output tensor of shape (batch_size, channels).
         """
+        # Validate inputs
+        if inputs is None:
+            raise ValueError("Inputs cannot be None.")
+        if not isinstance(inputs, np.ndarray):
+            raise ValueError("Inputs must be a numpy ndarray.")
+        
         # Ensure input shape is set if not provided
         if self.input_shape is None:
             if inputs.ndim == 4:
@@ -148,12 +154,6 @@ class GlobalPooling():
             elif inputs.ndim == 3 and inputs.shape != self.input_shape:
                 raise ValueError(f"Input shape {inputs.shape} does not match the set input shape {self.input_shape}.")
             
-        # Validate inputs
-        if inputs is None:
-            raise ValueError("Inputs cannot be None.")
-        if not isinstance(inputs, np.ndarray):
-            raise ValueError("Inputs must be a numpy ndarray.")
-        
         # Do pooling
         if inputs.ndim in [3, 4]:
             return self.__pool(inputs)

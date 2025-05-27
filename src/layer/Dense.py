@@ -25,27 +25,11 @@ class Dense():
             raise ValueError("units must be a positive integer.")
         self.units = units
 
-        if input_shape is not None:
-            if not isinstance(input_shape, tuple) or len(input_shape) != 1:
-                raise ValueError("input_shape must be a tuple of (input units,).")
-        self.input_shape = input_shape
-        
-        if kernel is not None:
-            if not isinstance(kernel, np.ndarray):
-                raise ValueError("kernel must be a numpy array.")
-            if kernel.ndim != 2 or kernel.shape[1] != units or (input_shape and kernel.shape[0] != input_shape[0]):
-                raise ValueError(f"kernel must be of shape ({input_shape[0] if input_shape else 'input units'}, {units}).")
-        self.kernel = kernel
-            
-        if bias is not None:
-            if not isinstance(bias, np.ndarray):
-                raise ValueError("bias must be a numpy array.")
-            if bias.ndim != 1 or bias.shape[0] != units:
-                raise ValueError(f"bias must be of shape ({units},).")
-        self.bias = bias
+        self.set_input_shape(input_shape)
+        self.set_weights([kernel, bias])
 
         if activation is not None and not callable(activation):
-            raise ValueError("activation must be a callable function.")
+            raise ValueError("activation must be a callable function or None.")
         self.activation = activation
         
     def get_config(self):
@@ -69,19 +53,31 @@ class Dense():
         Args:
             weights (list): Weights for the Dense layer, should contain two elements: kernel and bias.
         """
-        if len(weights) != 2:
-            raise ValueError("weights must be a list containing two elements: kernel and bias.")
+        if not isinstance(weights, (list, tuple)) or len(weights) != 2:
+            raise ValueError("weights must be a list or tuple of [kernel, bias].")
         
         kernel, bias = weights
-        
-        if (not isinstance(kernel, np.ndarray)) or (kernel.ndim != 2) or (kernel.shape[1] != self.units) or (self.input_shape and kernel.shape[0] != self.input_shape[0]):
-            raise ValueError(f"kernel must be a numpy array of shape ({self.input_shape[0] if self.input_shape else 'input units'}, {self.units}).")
-        
-        if (not isinstance(bias, np.ndarray)) or (bias.ndim != 1) or (bias.shape[0] != self.units):
-            raise ValueError(f"bias must be a numpy array of shape ({self.units},).")
-        
+        if kernel is not None:
+            if not isinstance(kernel, np.ndarray):
+                raise ValueError("kernel must be a numpy ndarray.")
+            if kernel.ndim != 2:
+                raise ValueError("kernel must be a 2D numpy ndarray.")
+            if kernel.shape[1] != self.units or (self.input_shape and kernel.shape[0] != self.input_shape[0]):
+                raise ValueError(f"kernel must be of shape ({self.input_shape[0] if self.input_shape else 'input units'}, {self.units}).")
+        else:
+            kernel = np.random.rand(self.input_shape[0], self.units) if self.input_shape else None
         self.kernel = kernel
-        self.bias = bias
+
+        if bias is not None:
+            if not isinstance(bias, np.ndarray):
+                raise ValueError("bias must be a numpy ndarray.")
+            if bias.ndim != 1:
+                raise ValueError(f"bias shape must be ({self.units},).")
+            if bias.shape[0] != self.units:
+                raise ValueError(f"Bias shape {bias.shape} does not match units ({self.units},).")
+        else:
+            bias = np.random.rand(self.units) if self.units > 0 else None
+        self.bias = bias        
 
     def get_weights(self):
         """
@@ -99,8 +95,11 @@ class Dense():
         Args:
             input_shape (tuple): Shape of the input data, should be in the form (input units,).
         """
-        if not isinstance(input_shape, tuple) or len(input_shape) != 1:
-            raise ValueError("input_shape must be a tuple of (input units,).")
+        if input_shape is not None:
+            if not isinstance(input_shape, tuple) or len(input_shape) != 1:
+                raise ValueError("input_shape must be a tuple of (input units,).")
+            if not all(isinstance(dim, int) and dim > 0 for dim in input_shape):
+                raise ValueError("input_shape dimensions must be positive integers.")
         self.input_shape = input_shape
 
     def compute_output_shape(self, input_shape=None):
@@ -120,16 +119,15 @@ class Dense():
 
         if len(input_shape) == 2: # Handle batch dimension
             batch_size, input_units = input_shape
-            if self.input_shape is not None and input_units != self.input_shape[0]:
-                raise ValueError(f"Input shape must match the set input shape ({self.input_shape[0]}).")
-            return (batch_size, self.units)            
         elif len(input_shape) == 1:
             input_units = input_shape[0]
-            if self.input_shape is not None and input_units != self.input_shape[0]:
-                raise ValueError(f"Input shape must match the set input shape ({self.input_shape[0]}).")
-            return (self.units,)
         else:
             raise ValueError("Input shape must be (height, width, channels) or (batch, height, width, channels).")
+        
+        if self.input_shape is not None and input_units != self.input_shape[0]:
+            raise ValueError(f"Input shape must match the set input shape ({self.input_shape[0]}).")
+
+        return (self.units,)
     
     @property
     def trainable_weights(self):
@@ -153,15 +151,13 @@ class Dense():
         Returns:
             np.ndarray: Output tensor of shape (batch_size, units).
         """
-        if self.kernel is None or self.bias is None:
-            raise ValueError("Weights must be set before performing forward pass.")
+        # Validate Kernel and Bias
+        if self.kernel.shape[0] != inputs.shape[1] or self.kernel.shape[1] != self.units:
+            raise ValueError(f"Kernel shape {self.kernel.shape} does not match input shape {inputs.shape[1]}.")
+        if self.bias.shape[0] != self.units:
+            raise ValueError(f"Bias shape {self.bias.shape} does not match units ({self.units},).")
         
-        if self.kernel.ndim != 2 or self.kernel.shape[1] != self.units or (self.input_shape and self.kernel.shape[0] != self.input_shape[0]):
-            raise ValueError(f"Kernel must be of shape (input units, {self.units}.")
-        
-        if self.bias.ndim != 1 or self.bias.shape[0] != self.units:
-            raise ValueError(f"Bias must be of shape ({self.units},).")
-        
+        # forward pass
         output = np.dot(inputs, self.kernel) + self.bias
         
         if self.activation is not None:
@@ -179,36 +175,32 @@ class Dense():
         Returns:
             np.ndarray: Output tensor of shape (batch_size, units) atau (units,).
         """
-        # Ensure input shape is set if not provided
-        if self.input_shape is None:
-            if inputs.ndim == 2:
-                self.set_input_shape(inputs.shape[1:])
-                print("Input shape set to:", self.input_shape)
-            elif inputs.ndim == 1:
-                self.set_input_shape(inputs.shape)
-            else:
-                self.set_input_shape(inputs.shape)
-
-        # Validate weights
-        if self.kernel is None or self.bias is None:
-            raise ValueError("Kernel and bias must be set before calling the layer.")
-        
         # Validate inputs
         if inputs is None:
             raise ValueError("Inputs cannot be None.")
         if not isinstance(inputs, np.ndarray):
             raise ValueError("Inputs must be a numpy ndarray.")
         
+        # Ensure input shape is set if not provided
+        if self.input_shape is None:
+            if inputs.ndim == 2:
+                self.set_input_shape(inputs.shape[1:])
+            else:
+                self.set_input_shape(inputs.shape)
+            print("Input shape set to:", self.input_shape)
+
+        # Validate weights
+        if self.kernel is None or self.bias is None:
+            raise ValueError("Kernel and bias must be set before calling the layer.")
+        
         # Do forward pass
-        if inputs.ndim == 2:
-            # Batch input
+        if inputs.ndim == 2: # Batch input
             if self.input_shape is not None and inputs.shape[1] != self.input_shape[0]:
-                raise ValueError(f"Inputs must be of shape (batch_size, {self.input_shape[0]}).")
+                raise ValueError(f"Input shape {inputs.shape[1]} does not match expected input shape {self.input_shape[0]}.")
             return self.__forward(inputs)
-        elif inputs.ndim == 1:
-            # Single input
+        elif inputs.ndim == 1: # Single input
             if self.input_shape is not None and inputs.shape[0] != self.input_shape[0]:
-                raise ValueError(f"Input must be of shape ({self.input_shape[0]},).")
+                raise ValueError(f"Input shape {inputs.shape[0]} does not match expected input shape {self.input_shape[0]}.")
             out = self.__forward(inputs[np.newaxis, :])
             return out[0]
         else:
@@ -216,19 +208,18 @@ class Dense():
 
 if __name__ == "__main__":
     # Example usage
-    kernel = np.random.rand(5, 10)  # 5 input units, 10 output units
-    bias = np.random.rand(10)  # 10 output units
-    input_data = np.random.rand(3, 5)  # Batch of 3 samples with 5 features each
-    # input_data = np.random.rand(5)     # single sample with 5 features each
+    kernel = np.random.rand(5, 10)
+    bias = np.random.rand(10)
+    input_data = np.random.rand(3, 5)
+    # input_data = np.random.rand(5)
 
-    dense_layer = Dense(units=10, input_shape=(5,), activation=np.tanh, kernel=kernel, bias=bias)
+    dense_layer = Dense(units=10, activation=np.tanh, kernel=kernel, bias=bias)
     output_data = dense_layer(input_data)
     print("Output data:", output_data)
     print("Output shape:", output_data.shape)
     print("Output shape from compute_output_shape:", dense_layer.compute_output_shape())
 
-    # Get the trainable weights
     trainable_weights = dense_layer.trainable_weights
     print("Trainable Weights:")
     for weight in trainable_weights:
-        print(weight.shape)
+        print("Weight shape:", weight.shape)

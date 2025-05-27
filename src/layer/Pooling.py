@@ -263,6 +263,12 @@ class Pooling():
         Returns:
             np.ndarray: Pooled output data.
         """
+        # Validate inputs
+        if inputs is None:
+            raise ValueError("Inputs cannot be None.")
+        if not isinstance(inputs, np.ndarray):
+            raise ValueError("Inputs must be a numpy ndarray.")
+        
         # Ensure input shape is set if not provided
         if self.input_shape is None:
             if inputs.ndim == 4:
@@ -275,13 +281,7 @@ class Pooling():
                 raise ValueError(f"Input shape {inputs.shape[1:]} does not match the set input shape {self.input_shape}.")
             elif inputs.ndim == 3 and inputs.shape != self.input_shape:
                 raise ValueError(f"Input shape {inputs.shape} does not match the set input shape {self.input_shape}.")
-        
-        # Validate inputs
-        if inputs is None:
-            raise ValueError("Inputs cannot be None.")
-        if not isinstance(inputs, np.ndarray):
-            raise ValueError("Inputs must be a numpy ndarray.")
-        
+
         # Do padding and pooling
         if inputs.ndim == 3:
             padded_inputs = self.__add_padding(inputs)

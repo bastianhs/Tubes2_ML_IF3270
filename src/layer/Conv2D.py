@@ -105,7 +105,7 @@ class Conv2D():
             if not isinstance(bias, np.ndarray):
                 raise ValueError("bias must be a numpy ndarray.")
             if bias.ndim != 1:
-                raise ValueError("bias shape must be (filters,).")
+                raise ValueError(f"bias shape must be ({self.filters},).")
             if bias.shape[0] != self.filters:
                 raise ValueError(f"Bias shape {bias.shape} does not match filters {self.filters}.")
         else:
@@ -271,6 +271,12 @@ class Conv2D():
         Returns:
             np.ndarray: Output after applying the convolution and activation function.
         """
+        # Validate inputs
+        if inputs is None:
+            raise ValueError("Inputs cannot be None.")
+        if not isinstance(inputs, np.ndarray):
+            raise ValueError("Inputs must be a numpy ndarray.")
+        
         # Ensure input shape is set if not provided
         if self.input_shape is None:
             if inputs.ndim == 4:
@@ -282,13 +288,7 @@ class Conv2D():
         # Validate weights
         if self.kernel is None or self.bias is None:
             raise ValueError("Kernel and bias must be set before calling the layer.")
-        
-        # Validate inputs
-        if inputs is None:
-            raise ValueError("Inputs cannot be None.")
-        if not isinstance(inputs, np.ndarray):
-            raise ValueError("Inputs must be a numpy ndarray.")
-        
+                
         # Do the convolution
         if inputs.ndim == 3:
             # Single sample, shape (height, width, channels)
