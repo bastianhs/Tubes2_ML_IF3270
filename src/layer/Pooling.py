@@ -1,13 +1,13 @@
 import numpy as np
 
 class Pooling():
-    def __init__(self, pool_size=(2, 2), pool_type='max', input_shape=None, strides=None, padding='valid', **kwargs):
+    def __init__(self, pool_size=(2, 2), mode='max', input_shape=None, strides=None, padding='valid', **kwargs):
         """
         Initializes a MaxPooling layer.
 
         Args:
             pool_size (tuple): Size of the pooling window (height, width).
-            pool_type (str): Type of pooling operation, 'max' or 'average'. Defaults to 'max'.
+            mode (str): Type of pooling operation, 'max' or 'average'. Defaults to 'max'.
             input_shape (tuple, optional): Shape of the input data. Should be in the form (height, width, channels). Defaults to None.
             strides (tuple, optional): Strides of the pooling operation. Defaults to None, which means it will be equal to pool_size.
             padding (str): Padding type, either 'valid' or 'same'. Defaults to 'valid'.
@@ -33,9 +33,9 @@ class Pooling():
                 raise ValueError("input_shape must be a tuple of (height, width, channels).")
             self.input_shape = input_shape
 
-        self.pool_type = pool_type.lower()
-        if self.pool_type not in ['max', 'average']:
-            raise ValueError("pool_type must be either 'max' or 'average'.")
+        self.mode = mode.lower()
+        if self.mode not in ['max', 'average']:
+            raise ValueError("mode must be either 'max' or 'average'.")
 
     def get_config(self):
         """
@@ -46,7 +46,7 @@ class Pooling():
         """
         return {
             'pool_size': self.pool_size,
-            'pool_type': self.pool_type,
+            'mode': self.mode,
             'input_shape': self.input_shape if self.input_shape is not None else (None, None, None),
             'strides': self.strides,
             'padding': self.padding
@@ -187,12 +187,12 @@ class Pooling():
         Returns:
             np.ndarray: Pooled output data.
         """
-        if self.pool_type == 'max':
+        if self.mode == 'max':
             return self.__max_pool(inputs)
-        elif self.pool_type == 'average':
+        elif self.mode == 'average':
             return self.__average_pool(inputs)
         else:
-            raise ValueError("pool_type must be either 'max' or 'average'.")
+            raise ValueError("mode must be either 'max' or 'average'.")
         
     def __max_pool(self, inputs):
         """
@@ -304,7 +304,7 @@ class MaxPooling(Pooling):
             strides (tuple, optional): Strides of the pooling operation. Defaults to None, which means it will be equal to pool_size.
             padding (str): Padding type, either 'valid' or 'same'. Defaults to 'valid'.
         """
-        super().__init__(pool_size=pool_size, pool_type='max', input_shape=input_shape, strides=strides, padding=padding, **kwargs)
+        super().__init__(pool_size=pool_size, mode='max', input_shape=input_shape, strides=strides, padding=padding, **kwargs)
 
 class AveragePooling(Pooling):
     def __init__(self, pool_size=(2, 2), input_shape=None, strides=None, padding='valid', **kwargs):
@@ -317,39 +317,37 @@ class AveragePooling(Pooling):
             strides (tuple, optional): Strides of the pooling operation. Defaults to None, which means it will be equal to pool_size.
             padding (str): Padding type, either 'valid' or 'same'. Defaults to 'valid'.
         """
-        super().__init__(pool_size=pool_size, pool_type='average', input_shape=input_shape, strides=strides, padding=padding, **kwargs)
+        super().__init__(pool_size=pool_size, mode='average', input_shape=input_shape, strides=strides, padding=padding, **kwargs)
 
 if __name__ == "__main__":
+    inputs = np.random.rand(1, 4, 4, 3)  # Batch size of 1
+
     # Without padding
     pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='valid')
-    inputs = np.random.rand(1, 4, 4, 3)  # Batch size of 1
     output = pooling_layer(inputs)
-    print("Output shape:", output.shape)
-    print("Output shape:", pooling_layer.compute_output_shape(inputs.shape))
-    print("Output data:\n", output)
+    print("Max pooled output shape:", output.shape)
+    print("Max pooled output shape:", pooling_layer.compute_output_shape(inputs.shape))
+    # print("Output data:\n", output)
     print("Trainable parameters:", pooling_layer.trainable_weights)
 
     pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='valid')
-    inputs = np.random.rand(1, 4, 4, 3)  # Batch size of 1
     output = pooling_layer(inputs)
-    print("Output shape:", output.shape)
-    print("Output shape:", pooling_layer.compute_output_shape(inputs.shape))
-    print("Output data:\n", output)
+    print("Average pooled output shape:", output.shape)
+    print("Average pooled output shape:", pooling_layer.compute_output_shape(inputs.shape))
+    # print("Output data:\n", output)
     print("Trainable parameters:", pooling_layer.trainable_weights)
 
     # With padding
     pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='same')
-    inputs = np.random.rand(1, 4, 4, 3)  # Batch size of 1
     output = pooling_layer(inputs)
-    print("Output shape with padding:", output.shape)
-    print("Output shape with padding:", pooling_layer.compute_output_shape(inputs.shape))
-    print("Output data with padding:\n", output)
+    print("Max pooled output shape with padding:", output.shape)
+    print("Max pooled output shape with padding:", pooling_layer.compute_output_shape(inputs.shape))
+    # print("Output data with padding:\n", output)
     print("Trainable parameters with padding:", pooling_layer.trainable_weights)
     
     pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='same')
-    inputs = np.random.rand(1, 4, 4, 3)  # Batch size of 1
     output = pooling_layer(inputs)
-    print("Output shape with padding:", output.shape)
-    print("Output shape with padding:", pooling_layer.compute_output_shape(inputs.shape))
-    print("Output data with padding:\n", output)
+    print("Average pooled output shape with padding:", output.shape)
+    print("Average pooled output shape with padding:", pooling_layer.compute_output_shape(inputs.shape))
+    # print("Output data with padding:\n", output)
     print("Trainable parameters with padding:", pooling_layer.trainable_weights)
