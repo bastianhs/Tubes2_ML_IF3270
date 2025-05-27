@@ -13,11 +13,7 @@ class GlobalPooling():
         if self.mode not in ['max', 'average']:
             raise ValueError("mode must be either 'max' or 'average'.")
         
-        self.input_shape = input_shape
-        if input_shape is not None:
-            if not isinstance(input_shape, tuple) or len(input_shape) != 3:
-                raise ValueError("input_shape must be a tuple of (height, width, channels).")
-            self.input_shape = input_shape
+        self.set_input_shape(input_shape)
     
     def get_config(self):
         """
@@ -57,8 +53,11 @@ class GlobalPooling():
         Args:
             input_shape (tuple): Shape of the input data. Should be in the form (height, width, channels).
         """
-        if not isinstance(input_shape, tuple) or len(input_shape) != 3:
-            raise ValueError("Input shape must be a tuple of (height, width, channels).")
+        if input_shape is not None:
+            if not isinstance(input_shape, tuple) or len(input_shape) != 3:
+                raise ValueError("input_shape must be a tuple of (height, width, channels).")
+            if not all(isinstance(dim, int) and dim > 0 for dim in input_shape):
+                raise ValueError("input_shape dimensions must be positive integers.")
         self.input_shape = input_shape
 
     def compute_output_shape(self, input_shape=None):
@@ -73,16 +72,20 @@ class GlobalPooling():
         """
         if input_shape is None:
             if self.input_shape is None:
-                raise ValueError("Input shape must be provided or set before computing output shape.")
+                raise ValueError("Input shape must be provided or set during initialization.")
             input_shape = self.input_shape
-        if len(input_shape) == 4:  # (batch, height, width, channels)
-            batch, height, width, channels = input_shape
-            return (batch, channels)
-        elif len(input_shape) == 3:  # (height, width, channels)
+            
+        if len(input_shape) == 4: # Handle batch dimension
+            _, height, width, channels = input_shape
+        elif len(input_shape) == 3:
             height, width, channels = input_shape
-            return (channels,)
         else:
             raise ValueError("Input shape must be (height, width, channels) or (batch, height, width, channels).")
+        
+        if channels is None or channels <= 0:
+            raise ValueError("Number of input channels must be a positive integer.")
+            
+        return (channels,)
 
     @property
     def trainable_weights(self):
@@ -113,7 +116,7 @@ class GlobalPooling():
                 return np.mean(inputs, axis=(1, 2))
             else:
                 raise ValueError("Invalid mode. Use 'max' or 'average'.")
-        elif inputs.ndim == 3:
+        else:
             # (height, width, channels) -> (channels,)
             if self.mode == 'max':
                 return np.max(inputs, axis=(0, 1))
@@ -121,8 +124,6 @@ class GlobalPooling():
                 return np.mean(inputs, axis=(0, 1))
             else:
                 raise ValueError("Invalid mode. Use 'max' or 'average'.")
-        else:
-            raise ValueError("Input must be 3D or 4D tensor.")
 
     def __call__(self, inputs):
         """
@@ -138,20 +139,26 @@ class GlobalPooling():
         if self.input_shape is None:
             if inputs.ndim == 4:
                 self.set_input_shape(inputs.shape[1:])
-            elif inputs.ndim == 3:
-                self.set_input_shape(inputs.shape)
             else:
-                raise ValueError("Inputs must be 3D or 4D array.")
+                self.set_input_shape(inputs.shape)
+            print("Input shape set to:", self.input_shape)
+        else:
+            if inputs.ndim == 4 and inputs.shape[1:] != self.input_shape:
+                raise ValueError(f"Input shape {inputs.shape[1:]} does not match the set input shape {self.input_shape}.")
+            elif inputs.ndim == 3 and inputs.shape != self.input_shape:
+                raise ValueError(f"Input shape {inputs.shape} does not match the set input shape {self.input_shape}.")
             
         # Validate inputs
         if inputs is None:
             raise ValueError("Inputs cannot be None.")
-        
         if not isinstance(inputs, np.ndarray):
-            raise ValueError("Inputs must be a numpy array.")
+            raise ValueError("Inputs must be a numpy ndarray.")
         
         # Do pooling
-        return self.__pool(inputs)
+        if inputs.ndim in [3, 4]:
+            return self.__pool(inputs)
+        else:
+            raise ValueError("Inputs must have shape (height, width, channels) or (batch, height, width, channels).")
     
 class GlobalMaxPooling(GlobalPooling):
     def __init__(self, input_shape=None):
@@ -175,19 +182,19 @@ class GlobalAveragePooling(GlobalPooling):
 
 if __name__ == "__main__":
     # Example usage
-    inputs = np.random.rand(5, 4, 4, 3)  # Batch of 2 images of size 4x4 with 3 channels
+    inputs = np.random.rand(4, 100, 10)
     
-    max_pooling_layer = GlobalMaxPooling(input_shape=(4, 4, 3))
+    max_pooling_layer = GlobalMaxPooling()
     avg_output = max_pooling_layer(inputs)
-    print("Max pooled output shape:", avg_output.shape)  # Should be (2, 3)
+    print("Max pooled output shape:", avg_output.shape)
     print("Max pooled output shape:", max_pooling_layer.compute_output_shape())
     print("Max pooled output:", avg_output)
     print("Trainable parameters:", max_pooling_layer.trainable_weights)
     print()
 
-    avg_pooling_layer = GlobalAveragePooling(input_shape=(4, 4, 3))
+    avg_pooling_layer = GlobalAveragePooling()
     avg_output = avg_pooling_layer(inputs)
-    print("Average pooled output shape:", avg_output.shape)  # Should be (2, 3)
+    print("Average pooled output shape:", avg_output.shape)
     print("Average pooled output shape:", avg_pooling_layer.compute_output_shape())
     print("Average pooled output:", avg_output)
     print("Trainable parameters:", avg_pooling_layer.trainable_weights)

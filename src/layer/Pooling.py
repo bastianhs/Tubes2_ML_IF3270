@@ -14,29 +14,29 @@ class Pooling():
         """
         if not isinstance(pool_size, tuple) or len(pool_size) != 2:
             raise ValueError("pool_size must be a tuple of (height, width).")
+        if not all(isinstance(dim, int) and dim > 0 for dim in pool_size):
+            raise ValueError("pool_size dimensions must be positive integers.")
         self.pool_size = pool_size
 
-        if strides is None:
-            self.strides = pool_size
-        elif isinstance(strides, tuple) and len(strides) == 2:
-            self.strides = strides
-        else:
-            raise ValueError("strides must be a tuple of (height, width) or None.")
-        
-        self.padding = padding.lower()
-        if self.padding not in ['valid', 'same']:
-            raise ValueError("padding must be either 'valid' or 'same'.")
-        
-        self.input_shape = input_shape
-        if input_shape is not None:
-            if not isinstance(input_shape, tuple) or len(input_shape) != 3:
-                raise ValueError("input_shape must be a tuple of (height, width, channels).")
-            self.input_shape = input_shape
+        self.set_input_shape(input_shape)
 
         self.mode = mode.lower()
         if self.mode not in ['max', 'average']:
             raise ValueError("mode must be either 'max' or 'average'.")
 
+        if strides is None:
+            self.strides = pool_size
+        elif isinstance(strides, int) and strides > 0:
+            self.strides = (strides, strides)
+        elif isinstance(strides, tuple) and len(strides) == 2 and all(isinstance(dim, int) and dim > 0 for dim in strides):
+            self.strides = strides
+        else:
+            raise ValueError("strides must be a positive integer or a tuple of two positive integers.")
+
+        self.padding = padding.lower()
+        if self.padding not in ['valid', 'same']:
+            raise ValueError("padding must be either 'valid' or 'same'.")
+        
     def get_config(self):
         """
         Returns the configuration of the MaxPooling layer.
@@ -78,8 +78,11 @@ class Pooling():
         Args:
             input_shape (tuple): Shape of the input data. Should be in the form (height, width, channels).
         """
-        if not isinstance(input_shape, tuple) or len(input_shape) != 3:
-            raise ValueError("Input shape must be a tuple of (height, width, channels).")
+        if input_shape is not None:
+            if not isinstance(input_shape, tuple) or len(input_shape) != 3:
+                raise ValueError("input_shape must be a tuple of (height, width, channels).")
+            if not all(isinstance(dim, int) and dim > 0 for dim in input_shape):
+                raise ValueError("input_shape dimensions must be positive integers.")
         self.input_shape = input_shape
 
     def compute_output_shape(self, input_shape=None):
@@ -97,11 +100,10 @@ class Pooling():
                 raise ValueError("Input shape must be provided or set during initialization.")
             input_shape = self.input_shape
         
-        if len(input_shape) == 4: # Handle batch
-            batch, height, width, channels = input_shape
+        if len(input_shape) == 4: # Handle batch dimension
+            _, height, width, channels = input_shape
         elif len(input_shape) == 3:
             height, width, channels = input_shape
-            batch = None
         else:
             raise ValueError("Input shape must be (height, width, channels) or (batch, height, width, channels).")
         
@@ -119,10 +121,7 @@ class Pooling():
         if output_height <= 0 or output_width <= 0:
             raise ValueError("Output dimensions must be positive. Check input shape, pool size, and strides.")
         
-        if batch is not None:
-            return (batch, output_height, output_width, channels)
-        else:
-            return (output_height, output_width, channels)
+        return (output_height, output_width, channels)
 
     @property
     def trainable_weights(self):
@@ -158,9 +157,9 @@ class Pooling():
             pool_height, pool_width = self.pool_size
             stride_height, stride_width = self.strides
             
+            # Calculate padding
             out_height = ((input_height - 1) // stride_height) + 1
             out_width = ((input_width - 1) // stride_width) + 1
-            
             pad_along_height = max((out_height - 1) * stride_height + pool_height - input_height, 0)
             pad_along_width = max((out_width - 1) * stride_width + pool_width - input_width, 0)
             pad_top = pad_along_height // 2
@@ -208,19 +207,19 @@ class Pooling():
         pool_height, pool_width = self.pool_size
         stride_height, stride_width = self.strides
 
-        pooled_height = (height - pool_height) // stride_height + 1
-        pooled_width = (width - pool_width) // stride_width + 1
+        output_height = (height - pool_height) // stride_height + 1
+        output_width = (width - pool_width) // stride_width + 1
 
-        output = np.zeros((batch_size, pooled_height, pooled_width, channels))
+        output = np.zeros((batch_size, output_height, output_width, channels))
 
         for b in range(batch_size):
-            for h in range(pooled_height):
-                for w in range(pooled_width):
+            for h in range(output_height):
                     h_start = h * stride_height
                     h_end = h_start + pool_height
-                    w_start = w * stride_width
-                    w_end = w_start + pool_width
-                    output[b, h, w] = np.max(inputs[b, h_start:h_end, w_start:w_end], axis=(0, 1))
+                    for w in range(output_width):
+                        w_start = w * stride_width
+                        w_end = w_start + pool_width
+                        output[b, h, w] = np.max(inputs[b, h_start:h_end, w_start:w_end], axis=(0, 1))
 
         return output
     
@@ -238,16 +237,16 @@ class Pooling():
         pool_height, pool_width = self.pool_size
         stride_height, stride_width = self.strides
 
-        pooled_height = (height - pool_height) // stride_height + 1
-        pooled_width = (width - pool_width) // stride_width + 1
+        output_height = (height - pool_height) // stride_height + 1
+        output_width = (width - pool_width) // stride_width + 1
 
-        output = np.zeros((batch_size, pooled_height, pooled_width, channels))
+        output = np.zeros((batch_size, output_height, output_width, channels))
 
         for b in range(batch_size):
-            for h in range(pooled_height):
-                for w in range(pooled_width):
-                    h_start = h * stride_height
-                    h_end = h_start + pool_height
+            for h in range(output_height):
+                h_start = h * stride_height
+                h_end = h_start + pool_height
+                for w in range(output_width):
                     w_start = w * stride_width
                     w_end = w_start + pool_width
                     output[b, h, w] = np.mean(inputs[b, h_start:h_end, w_start:w_end], axis=(0, 1))
@@ -268,17 +267,20 @@ class Pooling():
         if self.input_shape is None:
             if inputs.ndim == 4:
                 self.set_input_shape(inputs.shape[1:])
-            elif inputs.ndim == 3:
-                self.set_input_shape(inputs.shape)
             else:
-                raise ValueError("Inputs must be 3D or 4D array.")
+                self.set_input_shape(inputs.shape)
+            print("Input shape set to:", self.input_shape)
+        else:
+            if inputs.ndim == 4 and inputs.shape[1:] != self.input_shape:
+                raise ValueError(f"Input shape {inputs.shape[1:]} does not match the set input shape {self.input_shape}.")
+            elif inputs.ndim == 3 and inputs.shape != self.input_shape:
+                raise ValueError(f"Input shape {inputs.shape} does not match the set input shape {self.input_shape}.")
         
         # Validate inputs
         if inputs is None:
             raise ValueError("Inputs cannot be None.")
-        
         if not isinstance(inputs, np.ndarray):
-            raise ValueError("Inputs must be a numpy array.")
+            raise ValueError("Inputs must be a numpy ndarray.")
         
         # Do padding and pooling
         if inputs.ndim == 3:
@@ -320,17 +322,18 @@ class AveragePooling(Pooling):
         super().__init__(pool_size=pool_size, mode='average', input_shape=input_shape, strides=strides, padding=padding, **kwargs)
 
 if __name__ == "__main__":
-    inputs = np.random.rand(10, 4, 4, 3)  # Batch size of 1
+    input_shape = (100, 50, 3)
+    inputs = np.random.rand(10, input_shape[0], input_shape[1], input_shape[2])
 
     # Without padding
-    pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='valid')
+    pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=input_shape, strides=100, padding='valid')
     output = pooling_layer(inputs)
     print("Max pooled output shape:", output.shape)
     print("Max pooled output shape:", pooling_layer.compute_output_shape())
     # print("Output data:\n", output)
     print("Trainable parameters:", pooling_layer.trainable_weights)
 
-    pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='valid')
+    pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=input_shape, strides=5, padding='valid')
     output = pooling_layer(inputs)
     print("Average pooled output shape:", output.shape)
     print("Average pooled output shape:", pooling_layer.compute_output_shape())
@@ -338,14 +341,14 @@ if __name__ == "__main__":
     print("Trainable parameters:", pooling_layer.trainable_weights)
 
     # With padding
-    pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='same')
+    pooling_layer = MaxPooling(pool_size=(2, 2), input_shape=input_shape, strides=10, padding='same')
     output = pooling_layer(inputs)
     print("Max pooled output shape with padding:", output.shape)
     print("Max pooled output shape with padding:", pooling_layer.compute_output_shape())
     # print("Output data with padding:\n", output)
     print("Trainable parameters with padding:", pooling_layer.trainable_weights)
     
-    pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=(4, 4, 3), strides=(1, 1), padding='same')
+    pooling_layer = AveragePooling(pool_size=(2, 2), input_shape=input_shape, strides=3, padding='same')
     output = pooling_layer(inputs)
     print("Average pooled output shape with padding:", output.shape)
     print("Average pooled output shape with padding:", pooling_layer.compute_output_shape())
