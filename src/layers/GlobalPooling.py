@@ -20,7 +20,7 @@ class GlobalPooling():
         Get the configuration of the GlobalPooling layer.
 
         Returns:
-        dict: Configuration dictionary containing the mode.
+            dict: Configuration dictionary.
         """
         return {
             'mode': self.mode, 

@@ -37,6 +37,8 @@ class Pooling():
         if self.padding not in ['valid', 'same']:
             raise ValueError("padding must be either 'valid' or 'same'.")
         
+        self.kwargs = kwargs
+        
     def get_config(self):
         """
         Returns the configuration of the MaxPooling layer.
@@ -49,7 +51,8 @@ class Pooling():
             'mode': self.mode,
             'input_shape': self.input_shape if self.input_shape is not None else (None, None, None),
             'strides': self.strides,
-            'padding': self.padding
+            'padding': self.padding,
+            'kwargs': self.kwargs
         }
     
     def set_weights(self, weights):

@@ -28,21 +28,25 @@ class Dense():
 
         self.set_input_shape(input_shape)
         self.set_weights([kernel, bias])
-        self.activation = ActivationFunction().activation(activation) if activation else None
-
+        self.activation = ActivationFunction().activation(activation)
+        self.activation_name = activation
+        
+        self.kwargs = kwargs
         
     def get_config(self):
         """
         Get the configuration of the Dense layer.
+        
         Returns:
-            dict: Configuration dictionary containing the units, input shape, kernel, bias, and activation.
+            dict: Configuration dictionary.
         """
         return {
             'units': self.units,
             'input_shape': self.input_shape,
             'kernel': self.kernel,
             'bias': self.bias,
-            'activation': self.activation
+            'activation': self.activation_name,
+            'kwargs': self.kwargs
         }
     
     def set_weights(self, weights):
@@ -145,9 +149,7 @@ class Dense():
         
         # forward pass
         output = np.dot(inputs, self.kernel) + self.bias
-        
-        if self.activation is not None:
-            output = self.activation(output)
+        output = self.activation(output)
         
         return output
     
@@ -196,7 +198,7 @@ if __name__ == "__main__":
     # Example usage
     kernel = np.random.rand(5, 10)
     bias = np.random.rand(10)
-    input_data = np.random.rand(3, 5)
+    input_data = np.random.rand(10, 5)
     # input_data = np.random.rand(5)
 
     dense_layer = Dense(units=10, activation="tanh", kernel=kernel, bias=bias)

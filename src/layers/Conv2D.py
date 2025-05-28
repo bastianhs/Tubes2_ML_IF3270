@@ -41,7 +41,8 @@ class Conv2D():
 
         self.set_input_shape(input_shape)
         self.set_weights([kernel, bias])
-        self.activation = ActivationFunction().activation(activation) if activation else None
+        self.activation = ActivationFunction().activation(activation)
+        self.activation_name = activation
 
         if not isinstance(strides, tuple) or len(strides) != 2:
             raise ValueError("strides must be a tuple of (stride_height, stride_width).")
@@ -60,17 +61,18 @@ class Conv2D():
         Returns the configuration of the Conv2D layer.
 
         Returns:
-            dict: Configuration of the Conv2D layer.
+            dict: Configuration dictionary.
         """
         return {
             "filters": self.filters,
             "kernel_size": self.kernel_size,
-            "input_shape": self.input_shape if self.input_shape is not None else (None, None, None),
+            "input_shape": self.input_shape,
             "kernel": self.kernel,
             "bias": self.bias,
-            "activation": self.activation,
+            "activation": self.activation_name,
             "strides": self.strides,
-            "padding": self.padding
+            "padding": self.padding,
+            "kwargs": self.kwargs
         }
 
     def set_weights(self, weights):
@@ -254,8 +256,7 @@ class Conv2D():
                 output[:, :, f] += self.bias[f]
         
         # Apply activation if available
-        if self.activation is not None:
-            output = self.activation(output)
+        output = self.activation(output)
         
         return output
     
@@ -339,7 +340,8 @@ if __name__ == "__main__":
     conv_layer.set_weights([kernel, bias])
 
     # input tensor
-    inputs = np.random.rand(batch_size, input_height, input_width, channels)
+    # inputs = np.random.rand(batch_size, input_height, input_width, channels)
+    inputs = np.random.rand(input_height, input_width, channels)
 
     # Apply the Conv2D layer
     output = conv_layer(inputs)

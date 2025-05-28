@@ -18,9 +18,9 @@ class LSTM():
         Initialize the LSTM layer.
 
         Parameters:
-            units (int): Number of output units.
-            activation (str or callable): Activation function for the output.
-            recurrent_activation (str or callable): Activation function for the recurrent step.
+            units (int): Number of output units (dimensionality of the hidden state).
+            activation (str): Activation function for the output.
+            recurrent_activation (str): Activation function for the recurrent step.
             kernel (np.ndarray, optional): Weights of the layer, should be of shape (input units, units * 4).
             recurrent_kernel (np.ndarray, optional): Recurrent weights, should be of shape (units, units * 4).
             bias (np.ndarray, optional): Bias of the layer, should be of shape (units * 4,).
@@ -35,8 +35,11 @@ class LSTM():
             raise ValueError("units must be a positive integer.")
         self.units = units
 
-        self.activation = ActivationFunction().activation(activation) if activation else None
-        self.recurrent_activation = ActivationFunction().activation(recurrent_activation) if recurrent_activation else None
+        self.activation = ActivationFunction().activation(activation)
+        self.recurrent_activation = ActivationFunction().activation(recurrent_activation)
+        self.activation_name = activation
+        self.recurrent_activation_name = recurrent_activation
+        
         self.set_input_shape(input_shape)
         self.set_weights([kernel, recurrent_kernel, bias])
         self.return_sequences = return_sequences
@@ -48,15 +51,18 @@ class LSTM():
         Get the configuration of the LSTM layer.
 
         Returns:
-            dict: Configuration dictionary containing the units, activation, recurrent_activation, input shape, and weights.
+            dict: Configuration dictionary.
         """
         return {
             'units': self.units,
-            'activation': self.activation,
-            'recurrent_activation': self.recurrent_activation,
+            'activation': self.activation_name,
+            'recurrent_activation': self.recurrent_activation_name,
             'input_shape': self.input_shape,
             'return_sequences': self.return_sequences,
-            'weights': [self.kernel, self.recurrent_kernel, self.bias]
+            'kernel': self.kernel,
+            'recurrent_kernel': self.recurrent_kernel,
+            'bias': self.bias,
+            'kwargs': self.kwargs,
         }
     
     def set_weights(self, weights):
@@ -73,22 +79,22 @@ class LSTM():
         if kernel is not None:
             if not isinstance(kernel, np.ndarray):
                 raise ValueError("kernel must be a numpy array.")
-            if kernel.shape != (self.input_shape[1], self.units * 4):
-                raise ValueError(f"kernel must have shape ({self.input_shape[1]}, {self.units * 4}).")
+            if self.input_shape and kernel.shape != (self.input_shape[1], self.units * 4):
+                raise ValueError(f"kernel must have shape ({self.input_shape[1]}, {self.units * 4}). Got {kernel.shape}.")
         self.kernel = kernel
 
         if recurrent_kernel is not None:
             if not isinstance(recurrent_kernel, np.ndarray):
                 raise ValueError("recurrent_kernel must be a numpy array.")
             if recurrent_kernel.shape != (self.units, self.units * 4):
-                raise ValueError(f"recurrent_kernel must have shape ({self.units}, {self.units * 4}).")
+                raise ValueError(f"recurrent_kernel must have shape ({self.units}, {self.units * 4}). Got {recurrent_kernel.shape}.")
         self.recurrent_kernel = recurrent_kernel
 
         if bias is not None:
             if not isinstance(bias, np.ndarray):
                 raise ValueError("bias must be a numpy array.")
             if bias.shape != (self.units * 4,):
-                raise ValueError(f"bias must have shape ({self.units * 4},).")
+                raise ValueError(f"bias must have shape ({self.units * 4},). Got {bias.shape}.")
         self.bias = bias
 
     def get_weights(self):
@@ -139,7 +145,7 @@ class LSTM():
         elif len(input_shape) == 2: # handle single sample
             timesteps, features = input_shape
         else:
-            raise ValueError("Input shape must be a 2D or 3D tensor.")
+            raise ValueError("Input shape must be a 2D or 3D tensor (timesteps, features) or (batch_size, timesteps, features).")
         
         if self.input_shape is not None and self.input_shape[0] != timesteps:
             raise ValueError(f"Input shape mismatch: expected {self.input_shape[0]} timesteps, got {timesteps}.")
@@ -147,7 +153,7 @@ class LSTM():
         if self.return_sequences:
             return (timesteps, self.units)
         else:
-            return (self.units)
+            return (self.units,)
         
     @property
     def trainable_weights(self):
@@ -199,8 +205,10 @@ class LSTM():
             
             if self.return_sequences:
                 output[:, t, :] = h_t
-            else:
-                output = h_t
+        
+        if not self.return_sequences:
+            output = h_t
+        
         return output
 
     def __call__(self, inputs):
@@ -222,7 +230,7 @@ class LSTM():
         
         # Ensure input shape is set if not provided
         if self.input_shape is None:
-            if inputs.ndim == 2:
+            if inputs.ndim == 3:
                 self.set_input_shape(inputs.shape[1:])
             else:
                 self.set_input_shape(inputs.shape)
@@ -238,26 +246,77 @@ class LSTM():
             if features != self.input_shape[1]:
                 raise ValueError(f"Input features {features} does not match expected {self.input_shape[1]}.")
             output = self.__lstm_forward(inputs)
+            return output
         elif inputs.ndim == 2: # Single sample input
             timesteps, features = inputs.shape
             if features != self.input_shape[1]:
                 raise ValueError(f"Input features {features} does not match expected {self.input_shape[1]}.")
             output = self.__lstm_forward(inputs[np.newaxis, :, :])
+            return output.squeeze(0)
         else:
             raise ValueError("Inputs must be a 2D or 3D tensor.")
 
-        return output
         
 if __name__ == "__main__":
     # Example usage
-    lstm_layer = LSTM(units=64, input_shape=(10, 32), return_sequences=True)
-    input_data = np.random.rand(5, 10, 32)
-    lstm_layer.set_weights([
-        np.random.rand(32, 64 * 4),     # Kernel weights
-        np.random.rand(64, 64 * 4),     # Recurrent kernel weights
-        np.random.rand(64 * 4)          # Bias
-    ])
-    output_data = lstm_layer(input_data)
-    print("Output data:", output_data)
-    print("Output shape:", output_data.shape)
-    print("Output shape:", lstm_layer.compute_output_shape())
+# Layer Parameters
+    units = 64
+    timesteps = 10
+    features = 32
+    batch_size = 5
+
+    # Define Weights (manually for this example)
+    # kernel: (features, units)
+    kernel_weights = np.random.rand(features, units * 4)  # 4 for input, forget, cell, and output gates
+    # recurrent_kernel: (units, units)
+    recurrent_kernel_weights = np.random.rand(units, units * 4)
+    # bias: (units,)
+    bias_weights = np.random.rand(units * 4)
+
+
+    # Initialize SimpleRNN layer
+    lstm_layer = LSTM(units=units, input_shape=(timesteps, features), return_sequences=True)    
+    lstm_layer.set_weights([kernel_weights, recurrent_kernel_weights, bias_weights])
+    
+    # Prepare Input Data
+    # Batch input: (batch_size, timesteps, features)
+    input_data_batch = np.random.rand(batch_size, timesteps, features)
+    # Single sample input: (timesteps, features)
+    input_data_single = np.random.rand(timesteps, features)
+
+    # Forward Pass
+    print("--- Batch Input, Return Sequences ---")
+    output_data_batch_seq = lstm_layer(input_data_batch)
+    print("Input data shape:", input_data_batch.shape)
+    print("Output data shape:", output_data_batch_seq.shape)
+    print("Expected output shape (config):", lstm_layer.compute_output_shape())
+    # print("Output data (first sample, first timestep):", output_data_batch_seq[0, 0, :5])
+
+    print("\n--- Single Sample Input, Return Sequences ---")
+    output_data_single_seq = lstm_layer(input_data_single)
+    print("Input data shape:", input_data_single.shape)
+    print("Output data shape:", output_data_single_seq.shape) # Should be (timesteps, units)
+    print("Expected output shape (config):", lstm_layer.compute_output_shape())
+    # print("Output data (first timestep):", output_data_single_seq[0, :5])
+
+    # print("Output data single: \n", output_data_single_seq)
+    # print("Output data batch: \n", output_data_batch_seq)
+
+    
+    # Example with return_sequences=False
+    lstm_layer_last = LSTM(units=units, input_shape=(timesteps, features), return_sequences=False)
+    lstm_layer_last.set_weights([kernel_weights, recurrent_kernel_weights, bias_weights])
+
+    print("\n--- Batch Input, Return Last Output ---")
+    output_data_batch_last = lstm_layer_last(input_data_batch)
+    print("Input data shape:", input_data_batch.shape)
+    print("Output data shape:", output_data_batch_last.shape) # Should be (batch_size, units)
+    print("Expected output shape (config):", lstm_layer_last.compute_output_shape())
+    # print("Output data (first sample):", output_data_batch_last[0, :5])
+
+    print("\n--- Single Sample Input, Return Last Output ---")
+    output_data_single_last = lstm_layer_last(input_data_single)
+    print("Input data shape:", input_data_single.shape)
+    print("Output data shape:", output_data_single_last.shape) # Should be (units,)
+    print("Expected output shape (config):", lstm_layer_last.compute_output_shape())
+    # print("Output data:", output_data_single_last[:5])

@@ -15,7 +15,7 @@ class Flatten():
         Get the configuration of the Flatten layer.
 
         Returns:
-        dict: Configuration dictionary containing the input shape.
+            dict: Configuration dictionary.
         """
         return {
             'input_shape': self.input_shape

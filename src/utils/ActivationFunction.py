@@ -90,7 +90,7 @@ class ActivationFunction:
         Returns:
         np.ndarray: Output array after applying the activation function.
         """
-        if activation_type == 'linear':
+        if activation_type == 'linear' or activation_type is None:
             return self.__linear
         elif activation_type == 'relu':
             return self.__relu
