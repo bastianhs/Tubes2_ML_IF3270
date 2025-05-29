@@ -52,7 +52,10 @@ class Embedding():
         Args:
             weights (np.ndarray): Weights for the Embedding layer, should be of shape (input_dim, output_dim).
         """
+        weights = np.array(weights) if weights is not None else None
         if weights is not None:
+            weights = weights[0]
+
             if not isinstance(weights, np.ndarray):
                 raise ValueError("weights must be a numpy array.")
             if weights.shape != (self.input_dim, self.output_dim):
