@@ -1,9 +1,11 @@
 import numpy as np
 import sys
 import os
+import logging
 from tensorflow.keras.models import load_model
 
 sys.path.append(os.path.abspath("src"))
+
 from layers.Bidirectional import Bidirectional
 from layers.Conv2D import Conv2D
 from layers.Dense import Dense
@@ -15,7 +17,7 @@ from layers.Pooling import Pooling, MaxPooling, AveragePooling
 from layers.SimpleRNN import SimpleRNN
 
 class Model:
-    def __init__(self, layers=None):
+    def __init__(self, layers=None, input_shape=None, **kwargs):
         """
         Initialize the Model with an optional list of layers.
 
@@ -24,6 +26,7 @@ class Model:
         """
         self.layers = layers if layers is not None else []
         self.input_shape = None
+        self.kwargs = kwargs
 
     def add_layer(self, layer):
         """
@@ -97,7 +100,8 @@ class Model:
         """
         config = {
             'input_shape': self.input_shape,
-            'layers': [layer.get_config() for layer in self.layers]
+            'layers': [layer.get_config() for layer in self.layers],
+            'kwargs': self.kwargs
         }
         return config
     
@@ -111,7 +115,9 @@ class Model:
         Returns:
         np.ndarray: Output predictions.
         """
+        i = 0
         for layer in self.layers:
+            print(f"Processing layer {i}: {layer.__class__.__name__}")
             x = layer(x)
         return x
     
@@ -147,9 +153,8 @@ class Model:
             input_shape = output_shape if isinstance(output_shape, tuple) else None
 
         print("=" * 80)
-        print(f"{'Total params:':<55} {total_params:>10,}")
+        print(f"{'Total params:':<56} {total_params:>10,}")
         print("=" * 80)
-
 
     def load(self, model_path):
         """
@@ -169,7 +174,6 @@ class Model:
             layer_config = layer.get_config()
             layer_weights = layer.get_weights()
 
-            print(f"Loading layer: {layer_class}")
             if layer_class == 'Bidirectional':
                 # get the forward and backward layer configurations
                 forward_config = layer_config['layer']['config']
@@ -231,5 +235,6 @@ if __name__ == "__main__":
     # Example usage
     model = Model()
     # model.set_input_shape((100,))  # Example input shape for an image
+    model.set_input_shape((32, 32, 3))  # Example input shape for an image
     model.load("C:/Users/agilf/Documents/Tubes2_ML_IF3270/datasets/indonesian/model_cnn.h5")
     model.summary()

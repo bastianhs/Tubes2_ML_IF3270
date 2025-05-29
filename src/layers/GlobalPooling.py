@@ -1,7 +1,7 @@
 import numpy as np
 
 class GlobalPooling():
-    def __init__(self, mode='max', input_shape=None):
+    def __init__(self, mode='max', input_shape=None, **kwargs):
         """
         Initialize the GlobalPooling layer.
 
@@ -14,6 +14,7 @@ class GlobalPooling():
             raise ValueError("mode must be either 'max' or 'average'.")
         
         self.set_input_shape(input_shape)
+        self.kwargs = kwargs
     
     def get_config(self):
         """
@@ -161,24 +162,24 @@ class GlobalPooling():
             raise ValueError("Inputs must have shape (height, width, channels) or (batch, height, width, channels).")
     
 class GlobalMaxPooling(GlobalPooling):
-    def __init__(self, input_shape=None):
+    def __init__(self, input_shape=None, **kwargs):
         """
         Initialize the GlobalMaxPooling layer.
 
         Parameters:
         input_shape (tuple): Shape of the input data, should be in the form (height, width, channels).
         """
-        super().__init__(mode='max', input_shape=input_shape)
+        super().__init__(mode='max', input_shape=input_shape, **kwargs)
 
 class GlobalAveragePooling(GlobalPooling):
-    def __init__(self, input_shape=None):
+    def __init__(self, input_shape=None, **kwargs):
         """
         Initialize the GlobalAveragePooling layer.
 
         Parameters:
         input_shape (tuple): Shape of the input data, should be in the form (height, width, channels).
         """
-        super().__init__(mode='average', input_shape=input_shape)
+        super().__init__(mode='average', input_shape=input_shape, **kwargs)
 
 if __name__ == "__main__":
     # Example usage

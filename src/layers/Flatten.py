@@ -1,7 +1,7 @@
 import numpy as np
 
 class Flatten():
-    def __init__(self, input_shape=None):
+    def __init__(self, input_shape=None, **kwargs):
         """
         Initialize the Flatten layer.
 
@@ -9,6 +9,7 @@ class Flatten():
         input_shape (tuple): Shape of the input data, should be in the form (height, width, channels).
         """
         self.set_input_shape(input_shape)
+        self.kwargs = kwargs
     
     def get_config(self):
         """
@@ -18,7 +19,8 @@ class Flatten():
             dict: Configuration dictionary.
         """
         return {
-            'input_shape': self.input_shape
+            'input_shape': self.input_shape,
+            'kwargs': self.kwargs
         }
     
     def set_weights(self, weights):
