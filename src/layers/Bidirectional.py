@@ -135,7 +135,11 @@ class Bidirectional():
 
 
 if __name__ == "__main__":
-    from ..layers.SimpleRNN import SimpleRNN
+    import sys
+    import os
+
+    sys.path.append(os.path.abspath("src"))
+    from layers.SimpleRNN import SimpleRNN
     
     units = 64
     timesteps = 10

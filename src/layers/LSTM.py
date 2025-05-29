@@ -1,5 +1,9 @@
 import numpy as np
-from ..utils.ActivationFunction import ActivationFunction
+import sys
+import os
+
+sys.path.append(os.path.abspath("src"))
+from utils.ActivationFunction import ActivationFunction
 
 class LSTM():
     def __init__(

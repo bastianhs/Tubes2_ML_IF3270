@@ -1,4 +1,17 @@
 import numpy as np
+import sys
+import os
+
+sys.path.append(os.path.abspath("src"))
+from layers.Bidirectional import Bidirectional
+from layers.Conv2D import Conv2D
+from layers.Dense import Dense
+from layers.Embedding import Embedding
+from layers.Flatten import Flatten
+from layers.GlobalPooling import GlobalPooling, GlobalMaxPooling, GlobalAveragePooling
+from layers.LSTM import LSTM
+from layers.Pooling import Pooling, MaxPooling, AveragePooling
+from layers.SimpleRNN import SimpleRNN
 
 class Model:
     def __init__(self, layers=None):
