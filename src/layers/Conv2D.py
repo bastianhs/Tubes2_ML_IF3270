@@ -311,6 +311,12 @@ class Conv2D():
                 if sample.shape[2] != self.kernel.shape[2]:
                     raise ValueError(f"Input channels {sample.shape[2]} do not match kernel channels {self.kernel.shape[2]}.")
                 results.append(self.__convolution(sample))
+
+                sys.stdout.write(f"\rdata processed: {i + 1}/{batch_size}")
+                sys.stdout.flush()
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+
             return np.stack(results, axis=0)
         else:
             raise ValueError("Inputs must have shape (height, width, channels) or (batch, height, width, channels).")

@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 class Pooling():
     def __init__(self, pool_size=(2, 2), mode='max', input_shape=None, strides=None, padding='valid', **kwargs):
@@ -223,6 +224,11 @@ class Pooling():
                         w_start = w * stride_width
                         w_end = w_start + pool_width
                         output[b, h, w] = np.max(inputs[b, h_start:h_end, w_start:w_end], axis=(0, 1))
+            
+            sys.stdout.write(f"\rdata processed: {b + 1}/{batch_size}")
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
         return output
     
@@ -253,6 +259,11 @@ class Pooling():
                     w_start = w * stride_width
                     w_end = w_start + pool_width
                     output[b, h, w] = np.mean(inputs[b, h_start:h_end, w_start:w_end], axis=(0, 1))
+            
+            sys.stdout.write(f"\rdata processed: {b + 1}/{batch_size}")
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
         return output
     

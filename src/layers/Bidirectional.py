@@ -120,7 +120,11 @@ class Bidirectional():
             Output of the Bidirectional layer after processing the inputs.
         """
         forward_output = self.layer(inputs)
-        backward_output = self.backward_layer(inputs[::-1])
+        backward_output = self.backward_layer(np.flip(inputs, axis=1))
+
+        if isinstance(backward_output, np.ndarray) and backward_output.ndim == 3:
+            backward_output = np.flip(backward_output, axis=1)
+
 
         if self.merge_mode == 'concat':
             return np.concatenate([forward_output, backward_output], axis=-1)

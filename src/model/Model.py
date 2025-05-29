@@ -115,10 +115,11 @@ class Model:
         Returns:
         np.ndarray: Output predictions.
         """
-        i = 0
+        i = 1
         for layer in self.layers:
             print(f"Processing layer {i}: {layer.__class__.__name__}")
             x = layer(x)
+            i += 1
         return x
     
     def summary(self):

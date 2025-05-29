@@ -188,7 +188,12 @@ class SimpleRNN():
                 output_sequences[:, t, :] = h_t
             
             h_prev = h_t  # Update hidden state for the rnn timestep
-
+            
+            sys.stdout.write(f"\rdata processed: {t + 1}/{timesteps} timesteps")
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        
         if self.return_sequences:
             return output_sequences
         else:

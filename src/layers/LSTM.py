@@ -209,6 +209,12 @@ class LSTM():
             
             if self.return_sequences:
                 output[:, t, :] = h_t
+
+            sys.stdout.write(f"\rdata processed: {t + 1}/{timesteps} timesteps")
+            sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
         
         if not self.return_sequences:
             output = h_t
