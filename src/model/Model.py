@@ -237,5 +237,5 @@ if __name__ == "__main__":
     model = Model()
     # model.set_input_shape((100,))  # Example input shape for an image
     model.set_input_shape((32, 32, 3))  # Example input shape for an image
-    model.load("C:/Users/agilf/Documents/Tubes2_ML_IF3270/datasets/indonesian/model_cnn.h5")
+    # model.load("cnn_model2.h5")
     model.summary()
