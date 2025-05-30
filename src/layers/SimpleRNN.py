@@ -261,12 +261,9 @@ if __name__ == "__main__":
     features = 32
     batch_size = 5
 
-    # Define Weights (manually for this example)
-    # kernel: (features, units)
+    # Define Weights
     kernel_weights = np.random.rand(features, units)
-    # recurrent_kernel: (units, units)
     recurrent_kernel_weights = np.random.rand(units, units)
-    # bias: (units,)
     bias_weights = np.random.rand(units)
 
 
@@ -275,9 +272,7 @@ if __name__ == "__main__":
     rnn_layer.set_weights([kernel_weights, recurrent_kernel_weights, bias_weights])
     
     # Prepare Input Data
-    # Batch input: (batch_size, timesteps, features)
     input_data_batch = np.random.rand(batch_size, timesteps, features)
-    # Single sample input: (timesteps, features)
     input_data_single = np.random.rand(timesteps, features)
 
     # Forward Pass
@@ -294,10 +289,6 @@ if __name__ == "__main__":
     print("Output data shape:", output_data_single_seq.shape) # Should be (timesteps, units)
     print("Expected output shape (config):", rnn_layer.compute_output_shape())
     # print("Output data (first timestep):", output_data_single_seq[0, :5])
-
-    # print("Output data single: \n", output_data_single_seq)
-    # print("Output data batch: \n", output_data_batch_seq)
-
 
     # Example with return_sequences=False
     rnn_layer_last = SimpleRNN(units=units, input_shape=(timesteps, features), activation='tanh', return_sequences=False)
@@ -316,9 +307,3 @@ if __name__ == "__main__":
     print("Output data shape:", output_data_single_last.shape) # Should be (units,)
     print("Expected output shape (config):", rnn_layer_last.compute_output_shape())
     # print("Output data:", output_data_single_last[:5])
-
-    # Get Layer Configuration
-    # config = rnn_layer.get_config()
-    # print("\nLayer Config:", config)
-    # Note: If activation in config is a function object, it will print something like <function ActivationFunction.__tanh at 0x...>.
-    # If it's self.activation_name, it will print "tanh". I've set it to return name.

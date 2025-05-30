@@ -269,18 +269,15 @@ class LSTM():
         
 if __name__ == "__main__":
     # Example usage
-# Layer Parameters
+    # Layer Parameters
     units = 64
     timesteps = 10
     features = 32
     batch_size = 5
 
-    # Define Weights (manually for this example)
-    # kernel: (features, units)
-    kernel_weights = np.random.rand(features, units * 4)  # 4 for input, forget, cell, and output gates
-    # recurrent_kernel: (units, units)
+    # Define Weights
+    kernel_weights = np.random.rand(features, units * 4)
     recurrent_kernel_weights = np.random.rand(units, units * 4)
-    # bias: (units,)
     bias_weights = np.random.rand(units * 4)
 
 
@@ -289,9 +286,7 @@ if __name__ == "__main__":
     lstm_layer.set_weights([kernel_weights, recurrent_kernel_weights, bias_weights])
     
     # Prepare Input Data
-    # Batch input: (batch_size, timesteps, features)
     input_data_batch = np.random.rand(batch_size, timesteps, features)
-    # Single sample input: (timesteps, features)
     input_data_single = np.random.rand(timesteps, features)
 
     # Forward Pass
@@ -309,10 +304,6 @@ if __name__ == "__main__":
     print("Expected output shape (config):", lstm_layer.compute_output_shape())
     # print("Output data (first timestep):", output_data_single_seq[0, :5])
 
-    # print("Output data single: \n", output_data_single_seq)
-    # print("Output data batch: \n", output_data_batch_seq)
-
-    
     # Example with return_sequences=False
     lstm_layer_last = LSTM(units=units, input_shape=(timesteps, features), return_sequences=False)
     lstm_layer_last.set_weights([kernel_weights, recurrent_kernel_weights, bias_weights])

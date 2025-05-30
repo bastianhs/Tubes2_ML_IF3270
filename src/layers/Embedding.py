@@ -54,7 +54,8 @@ class Embedding():
         """
         weights = np.array(weights) if weights is not None else None
         if weights is not None:
-            weights = weights[0]
+            if weights.ndim == 3:
+                weights = weights[0]
 
             if not isinstance(weights, np.ndarray):
                 raise ValueError("weights must be a numpy array.")
@@ -193,7 +194,6 @@ if __name__ == "__main__":
     )
     embedding_layer.set_weights(np.random.rand(max_tokens, embedding_dim))
 
-    # Generate random input indices (batch_size=1, sequence_length=10)  
     inputs = np.array(np.random.randint(0, max_tokens, (batch_size, sequence_length[0])))
     # inputs = np.array(np.random.randint(0, max_tokens, sequence_length[0]))
 
